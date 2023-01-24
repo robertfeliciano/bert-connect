@@ -33,7 +33,8 @@ fn menu(items: &[String]) -> String {
 fn main() {
     inquire::set_global_render_config(get_render_config());
     loop {
-        match menu(&["Send Something".into(), "Query Server".into(), "Ping Server".into(), "SSH".into(), "Configure".into(), "Exit".into()]).as_str() {
+        match menu(&["Send Something".into(), "Query Server".into(), "Ping Server".into(), 
+                            "SSH".into(), "Configure".into(), "Quit".into()]).as_str() {
             "Send Something" => println!("send..."),
             "Query Server" => reset!("querying"),
             "Ping Server" => {
@@ -45,7 +46,7 @@ fn main() {
                 network::ssh_into();
             }
             "Configure" => config::configure(),
-            "Exit" => break,
+            "Quit" => break,
             err => {
                 println!("{err}");
                 break;
