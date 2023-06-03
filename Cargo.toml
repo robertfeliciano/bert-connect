@@ -1,11 +1,16 @@
 [package]
-name = "server"
+name = "bdrop"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.71"
 exec = "0.3.1"
-inquire = "0.5.3"
+inquire = { version = "0.5.3", features = ["editor"] }
 nix = "0.26.1"
+serde = { version = "1.0.163", features = ["derive"] }
+serde_json = "1.0.96"
+thiserror = "1.0.40"
+

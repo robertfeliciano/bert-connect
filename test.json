@@ -1,0 +1,20 @@
+[
+  {
+    "user": "robert",
+    "host": "ubuntu",
+    "addr": "192.168.1.111",
+    "port_no": 8787
+  },
+  {
+    "user": "robert",
+    "host": "fedora",
+    "addr": "192.168.1.112",
+    "port_no": 6767
+  },
+  {
+    "user": "bill",
+    "host": "debian",
+    "addr": "192.168.1.124",
+    "port_no": 3434
+  }
+]

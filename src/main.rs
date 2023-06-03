@@ -1,13 +1,16 @@
-use inquire::{Select, ui::{Attributes, Color, StyleSheet, RenderConfig}, InquireError};
+use inquire::{
+    ui::{Attributes, Color, RenderConfig, StyleSheet},
+    InquireError, Select,
+};
 
 pub mod config;
 
 pub mod network;
 
-macro_rules! reset{
+macro_rules! reset {
     ($s:expr) => {
         println!("\x1b[2J\x1b[1;1H{}", $s)
-    }
+    };
 }
 
 fn get_render_config() -> RenderConfig {
@@ -33,20 +36,37 @@ fn menu(items: &[String]) -> String {
 fn main() {
     inquire::set_global_render_config(get_render_config());
     loop {
-        match menu(&["Send Something".into(), "Query Server".into(), "Ping Server".into(), 
-                            "SSH".into(), "Configure".into(), "Quit".into()]).as_str() {
+        match menu(&[
+            "Send Something".into(),
+            "Query Server".into(),
+            "Ping Server".into(),
+            "SSH".into(),
+            "Configure".into(),
+            "Quit".into(),
+        ])
+        .as_str()
+        {
             "Send Something" => println!("send..."),
+
             "Query Server" => reset!("querying"),
+
             "Ping Server" => {
                 println!("Pinging server!");
                 network::ping();
             }
+
             "SSH" => {
                 println!("SSHing into server");
                 network::ssh_into();
             }
-            "Configure" => config::configure(),
+
+            "Configure" => match config::configure() {
+                Ok(_) => continue,
+                Err(e) => eprintln!("{e}"),
+            },
+
             "Quit" => break,
+
             err => {
                 println!("{err}");
                 break;

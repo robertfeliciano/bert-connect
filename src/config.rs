@@ -1,166 +1,152 @@
-use std::fs::{OpenOptions, self, File};
-use std::net::IpAddr;
-use std::str::FromStr;
-use std::{env, path};
-use std::io::Write;
+use anyhow::{anyhow, Context};
+use inquire::ui::{IndexPrefix, RenderConfig};
+use inquire::{InquireError, Select, Text};
+use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, fs, net::IpAddr, str::FromStr};
 
-use inquire::{Text, Select, InquireError, required, ui::RenderConfig};
+use bdrop::errors::BDError::ConfigError;
+use bdrop::CONFIG;
 
-#[derive(Debug)]
-pub struct ConfigFile {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Config {
     pub user: String,
     pub host: String,
     pub addr: IpAddr,
     pub port_no: u16,
 }
 
-#[inline]
-fn get_host() -> String {
-    loop {
-        let input = Text::new("Name of the host:")
-            .with_validator(required!())
-            .prompt();
-        match input {
-            Ok(host) => {
-                return host;
-            },
-            Err(_) => {
-                println!("An error happened when asking for the host's name, please try again.")
-            },
-        }
-    }
-}
-
-#[inline]
-fn get_addr() -> IpAddr {
-    loop {
-        let input = Text::new("Address of the host:")
-            .with_validator(required!())
-            .prompt();
-        match input {
-            Ok(addr) => {
-                let ip_addr = IpAddr::from_str(&addr);
-                match ip_addr {
-                    Ok(ip) => return ip,
-                    Err(_) => println!("Not a valid IP address. Try again.")
-                }
-            },
-            Err(_) => {
-                println!("An error happened when asking for the host's address, please try again.")
-            },
-        }
-    }
-}
-
-#[inline]
-fn get_port() -> u16 {
-    loop {
-        let input = Text{
-            message: "Port you want to connect to (empty for port 22):",
-            initial_value: None,
-            default: None,
-            placeholder: Some("22"),
-            help_message: None,
-            formatter: Text::DEFAULT_FORMATTER,
-            validators: Vec::new(),
-            page_size: Text::DEFAULT_PAGE_SIZE,
-            autocompleter: None,
-            render_config: RenderConfig::default(),
-        }
-            .prompt();
-        match input {
-            Ok(port) => {
-                if port.is_empty() { return 22 };
-                let port_no = u16::from_str(&port);
-                match port_no {
-                    Ok(p) => return p,
-                    Err(_) => println!("Not a valid IP address. Try again.")
-                }
-            },
-            Err(_) => {
-                println!("An error happened when asking for the port number, please try again.")
-            },
-        }
-    }
-}
-
-#[inline]
-fn get_user() -> String {
-    loop {
-        let input = Text::new("Username:")
-            .with_validator(required!())
-            .prompt();
-        match input {
-            Ok(name) => {
-                return name;
-            },
-            Err(_) => {
-                println!("An error happened when asking for the host's name, please try again.")
-            },
-        }
-    }
-}
-
 fn menu(items: &[String]) -> String {
-    Select::new("Setup new host or change existing one?", items.to_vec())
+    Select::new("What would you like to do?", items.to_vec())
         .with_vim_mode(true)
-        .with_help_message("Vim Mode enabled, enter to select, type to filter")
         .prompt()
         .unwrap_or_else(|e: InquireError| e.to_string())
 }
 
-fn change_entry(conf: &ConfigFile, _2file: &File, _content: &str) {
-    println!("Changing entry for {}@{}", conf.user, conf.addr);
+fn get_input() -> Result<Config, anyhow::Error> {
+    let user = Text::new("Username:")
+        .prompt()
+        .context(ConfigError("Invalid username.".to_owned()))?;
+
+    let host = Text::new("Hostname:")
+        .prompt()
+        .context(ConfigError("Invalid hostname.".to_owned()))?;
+
+    let addr = IpAddr::from_str(Text::new("IP Address of host:").prompt()?.as_str())
+        .context(ConfigError("Invalid IP Address.".to_owned()))?;
+
+    let port_no: u16 = Text::new("Port number to connect to:")
+        .prompt()?
+        .parse::<u16>()
+        .context(ConfigError("Invalid port number.".to_owned()))?;
+
+    let new_server = Config {
+        user,
+        host,
+        addr,
+        port_no,
+    };
+
+    Ok(new_server)
 }
 
-    /**
-     * check if file ~/.config/bertconnect/config.bert exists
-     * create it if it doesnt
-     * ask to setup new connection or change existing one
-     * setup new: append this stuff to the end of the file
-     * change existing: rewrite file at location of "Host" they input
-     */
-pub fn configure(){
-    let bertconnect = format!("{}/.config/bertconnect", env::var("HOME").unwrap());
-    let path_to_conf = format!("{}/.config/bertconnect/config.bert", env::var("HOME").unwrap());
+fn write_to_config(configs: Vec<Config>) -> Result<(), anyhow::Error> {
+    let serialized = serde_json::to_string_pretty(&configs)?;
+    fs::write(CONFIG, serialized)?;
+    Ok(())
+}
 
-    if !path::Path::new(&bertconnect).exists(){
-        fs::create_dir(format!("{}/.config/bertconnect/", env::var("HOME").expect("hmm"))).expect("aint no way");
-        let _conf = OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&path_to_conf);
-    }
-
-    let mut setup = false;
-    match menu(&["Setup new".into(), "Change existing".into()]).as_str() {
-        "Setup new" => setup = true,
-        "Change existing" => (),
-        err => println!("{err}"),
-    }
-
-    let user = get_user();
-    let host = get_host();
-    let addr = get_addr();
-    let port_no = get_port();
-    let conf = ConfigFile { user, host, addr, port_no };
-    // println!("{:?}", conf);
-    let conf_content = format!("===\nHost {}\n  Address {}\n  User {}\n  Port {}\n", conf.host, conf.addr, conf.user, conf.port_no);
-    println!("{conf_content}");
-
-    if setup {
-        let mut file = OpenOptions::new()
-            .append(true)
-            .open(&path_to_conf)
-            .expect("Couldn't open file");
-        if let Err(_) = writeln!(file, "{}", conf_content) { panic!("I'm tired of error checking") };
-    }
-    else {
-        let mut file = OpenOptions::new()
-            .write(true)
-            .open(&path_to_conf)
-            .expect("Couldn't open file");
-        change_entry(&conf, &file, &conf_content);
+fn add_server() -> Result<(), anyhow::Error> {
+    let server = match get_input() {
+        Ok(s) => s,
+        Err(e) => return Err(e),
     };
+    // file should be in ~/.config/bdrop/config.json
+    let data = if let Ok(f) = fs::OpenOptions::new().read(true).open(CONFIG) {
+        // if the file exists we read the data from it and add the new server to it
+        let mut data: Vec<Config> = serde_json::from_reader(f)?;
+        data.push(server);
+        data
+    } else {
+        // otherwise we just create the file and a new vector with only the new server
+        let _ = fs::File::create(CONFIG);
+        vec![server]
+    };
+    write_to_config(data)?;
+    Ok(())
+}
+
+fn server_choices(raw: &[Config]) -> (Vec<String>, HashMap<String, u16>) {
+    let mut choices: Vec<String> = Vec::new();
+    let mut index: u16 = 0;
+    let mut indices = HashMap::new();
+    raw.iter().for_each(|server| {
+        let key = format!(
+            "{}@{} | {}:{}",
+            server.user, server.host, server.addr, server.port_no
+        );
+        choices.push(key);
+        // need to redo the format! because it was giving me  a "use of moved value"... didn't feel like fixing it
+        indices.insert(
+            format!(
+                "{}@{} | {}:{}",
+                server.user, server.host, server.addr, server.port_no
+            ),
+            index,
+        );
+        index += 1;
+    });
+    (choices, indices)
+}
+
+fn get_servers() -> Result<(Vec<String>, HashMap<String, u16>, Vec<Config>), anyhow::Error> {
+    let f = fs::OpenOptions::new()
+        .read(true)
+        .open(CONFIG)
+        .context("No servers to edit.")?;
     
+    let raw: Vec<Config> = serde_json::from_reader(f)?;
+    let (choices, map) = server_choices(&raw);
+    Ok((choices, map, raw))
+}
+
+fn edit_config() -> Result<(), anyhow::Error> {
+    let (items, indices, mut configs) = match get_servers() {
+        Ok(res) => res,
+        Err(e) => return Err(e),
+    };
+
+    let select_renderer = RenderConfig::default().with_option_index_prefix(IndexPrefix::SpacePadded);
+
+    let choice = Select::new("Which configuration would you like to edit?", items)
+        .with_render_config(select_renderer)
+        .with_vim_mode(true)
+        .prompt()?;
+
+    let index = if let Some(i) = indices.get(&choice) {
+        *i
+    } else {
+        return Err(anyhow!("Choice issue"));
+    };
+
+    let edited = get_input()?;
+    configs[index as usize] = edited;
+
+    write_to_config(configs)?;
+    Ok(())
+}
+
+pub fn configure() -> Result<(), anyhow::Error> {
+    match menu(&["Add new server".into(), "Change server endpoint".into()]).as_str() {
+        "Add new server" => match add_server() {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e),
+        },
+
+        "Change server endpoint" => match edit_config() {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e),
+        },
+
+        _ => Err(anyhow!("Menu Error.")),
+    }
 }
