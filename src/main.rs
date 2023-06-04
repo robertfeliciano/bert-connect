@@ -50,15 +50,15 @@ fn main() {
 
             "Query Server" => reset!("querying"),
 
-            "Ping Server" => {
-                println!("Pinging server!");
-                network::ping();
-            }
+            "Ping Server" => match network::ping() {
+                Ok(_) => continue,
+                Err(e) => eprintln!("{e}"),
+            },
 
-            "SSH" => {
-                println!("SSHing into server");
-                network::ssh_into();
-            }
+            "SSH" => match network::ssh() {
+                Ok(_) => continue,
+                Err(e) => eprintln!("{e}"),
+            },
 
             "Configure" => match config::configure() {
                 Ok(_) => continue,

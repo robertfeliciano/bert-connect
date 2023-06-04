@@ -1,20 +1,20 @@
 [
   {
-    "user": "robert",
+    "user": "codedifferent",
     "host": "ubuntu",
-    "addr": "192.168.1.111",
-    "port_no": 8787
+    "addr": "192.168.1.100",
+    "port_no": 7777
+  },
+  {
+    "user": "nina",
+    "host": "debian",
+    "addr": "191.168.1.222",
+    "port_no": 8182
   },
   {
     "user": "robert",
     "host": "fedora",
-    "addr": "192.168.1.112",
-    "port_no": 6767
-  },
-  {
-    "user": "bill",
-    "host": "debian",
-    "addr": "192.168.1.124",
-    "port_no": 3434
+    "addr": "127.0.0.1",
+    "port_no": 9999
   }
 ]

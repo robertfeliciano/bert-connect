@@ -4,8 +4,9 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum BDError {
-    ConnectionError(String),
-    ConfigError(String),
+    ConnectionError(&'static str),
+    ConfigError(&'static str),
+    SystemError(&'static str),
 }
 
 impl fmt::Display for BDError {
