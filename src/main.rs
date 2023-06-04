@@ -7,6 +7,8 @@ pub mod config;
 
 pub mod network;
 
+pub mod client;
+
 macro_rules! reset {
     ($s:expr) => {
         println!("\x1b[2J\x1b[1;1H{}", $s)

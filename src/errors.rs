@@ -11,6 +11,10 @@ pub enum BDError {
 
 impl fmt::Display for BDError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
+        match self {
+            BDError::ConnectionError(msg) => write!(f, "Connection Error: {msg}"),
+            BDError::ConfigError(msg) => write!(f, "Configuration Error: {msg}"),
+            BDError::SystemError(msg) => write!(f, "System Error: {msg}"),
+        }
     }
 }
